@@ -1,0 +1,43 @@
+version: '3'
+
+services:
+  db:
+    image: "postgres:latest"
+    env_file: .env
+    volumes:
+      - .db:/var/lib/postgresql/data
+
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app/
+    env_file: .env
+    depends_on:
+      - db
+      - redis
+
+  worker:
+    build: .
+    command: celery -A githubmonitor worker --loglevel=info
+    volumes:
+      - .:/app/
+    env_file: .env
+    depends_on:
+      - db
+      - redis
+
+  webpack:
+    build:
+      context: .
+      dockerfile: Dockerfile-webpack
+    command: npm run dev
+    environment:
+      - NODE_OPTIONS=--openssl-legacy-provider
+    volumes:
+      - .:/app/
+      - /app/node_modules
+
+  redis:
+    image: "redis:latest"
